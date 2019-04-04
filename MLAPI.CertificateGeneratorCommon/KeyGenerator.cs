@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Threading;
 
@@ -13,21 +14,28 @@ namespace MLAPI.CertificateGeneratorCommon
     
     public static class KeyGenerator
     {
-        private static Thread _thread = null;
+        private static List<Thread> _thread = new List<Thread>();
         private static bool _isRunning = false;
         private static int _keySize;
-        private static ConcurrentQueue<PendingRSAKey> _generatedKeys = new ConcurrentQueue<PendingRSAKey>();
         
-        public static void Start(int size)
+        private static readonly ReaderWriterLockSlim _queueLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
+        private static readonly Queue<PendingRSAKey> _generatedKeys = new Queue<PendingRSAKey>();
+        
+        public static void Start(int keySize, int threadCount)
         {
             if (_isRunning)
             {
                 throw new Exception("Already running");
             }
-            _keySize = size;
+            _keySize = keySize;
             _isRunning = true;
-            _thread = new Thread(Run);
-            _thread.Start();
+
+            for (int i = 0; i < threadCount; i++)
+            {
+                Thread thread = new Thread(Run);
+                _thread.Add(thread);
+                thread.Start();
+            }
         }
 
         private static void Run()
@@ -43,11 +51,22 @@ namespace MLAPI.CertificateGeneratorCommon
                 if (!_isRunning)
                     break;
 
-                _generatedKeys.Enqueue(new PendingRSAKey()
+                PendingRSAKey newKey = new PendingRSAKey()
                 {
                     Key = GenerateKey(),
                     CreationTime = DateTime.UtcNow
-                });
+                };
+
+                _queueLock.EnterWriteLock();
+
+                try
+                {
+                    _generatedKeys.Enqueue(newKey);
+                }
+                finally
+                {
+                    _queueLock.ExitWriteLock();
+                }
                 
                 Console.WriteLine("Generated key. Queue size: " + _generatedKeys.Count);
             }
@@ -55,22 +74,87 @@ namespace MLAPI.CertificateGeneratorCommon
 
         private static void RotateKeys()
         {
-            if (_generatedKeys.TryPeek(out PendingRSAKey oldestKey))
+            _queueLock.EnterUpgradeableReadLock();
+
+            try
             {
-                if ((DateTime.UtcNow - oldestKey.CreationTime).TotalMinutes > 10)
+                if (_generatedKeys.Count > 20)
                 {
-                    _generatedKeys.TryDequeue(out PendingRSAKey dequeuedKey);
+                    _queueLock.EnterWriteLock();
+
+                    try
+                    {
+                        _generatedKeys.Dequeue();
+                    }
+                    finally
+                    {
+                        _queueLock.ExitWriteLock();
+                    }
+
+                    Console.WriteLine("Rotated key for being too many...");
                 }
+
+                if (_generatedKeys.Count > 0)
+                {
+                    PendingRSAKey oldestKey = _generatedKeys.Peek();
+
+                    if ((DateTime.UtcNow - oldestKey.CreationTime).TotalMinutes > 10)
+                    {
+                        _queueLock.EnterWriteLock();
+                        
+                        try
+                        {
+                            _generatedKeys.Dequeue();
+                        }
+                        finally
+                        {
+                            _queueLock.ExitWriteLock();
+                        }
+                        Console.WriteLine("Rotated key for being too old...");
+                    }
+                }
+            }
+            finally
+            {
+                _queueLock.ExitUpgradeableReadLock();
             }
         }
 
         public static RSAParameters Get()
         {
-            PendingRSAKey rsa;
-            
-            while (!_generatedKeys.TryDequeue(out rsa)) 
-                Thread.SpinWait(1);
+            PendingRSAKey rsa = null;
 
+            do
+            {
+                _queueLock.EnterUpgradeableReadLock();
+                
+                try
+                {
+                    if (_generatedKeys.Count > 0)
+                    {
+                        _queueLock.EnterWriteLock();
+
+                        try
+                        {
+                            rsa = _generatedKeys.Dequeue();
+                        }
+                        finally
+                        {
+                            _queueLock.ExitWriteLock();
+                        }
+                    }
+                }
+                finally
+                {
+                    _queueLock.ExitUpgradeableReadLock();
+                }
+
+                if (rsa == null)
+                {
+                    Thread.SpinWait(5);
+                }
+            } while (rsa == null);
+            
             return rsa.Key;
         }
 

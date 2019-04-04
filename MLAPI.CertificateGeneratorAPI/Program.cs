@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
@@ -13,6 +14,8 @@ namespace MLAPI.CertificateGeneratorAPI
 {
     public class Program
     {
+        public static int GENERATION_THREADS = Environment.ProcessorCount;
+        public static int KEY_SIZE = 4096;
         public static string GITHUB_GIST_TOKEN = null;
         
         public static void Main(string[] args)
@@ -23,9 +26,19 @@ namespace MLAPI.CertificateGeneratorAPI
                 {
                     GITHUB_GIST_TOKEN = args[i + 1];
                 }
+                
+                if (args[i].ToLower() == "-generation-threads")
+                {
+                    GENERATION_THREADS = int.Parse(args[i + 1]);
+                }
+                
+                if (args[i].ToLower() == "-key-size")
+                {
+                    KEY_SIZE = int.Parse(args[i + 1]);
+                }
             }
             
-            KeyGenerator.Start(4096);
+            KeyGenerator.Start(KEY_SIZE, GENERATION_THREADS);
             
             CreateWebHostBuilder(args).Build().Run();
         }
