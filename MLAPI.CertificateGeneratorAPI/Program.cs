@@ -17,6 +17,7 @@ namespace MLAPI.CertificateGeneratorAPI
         public static int GENERATION_THREADS = Environment.ProcessorCount;
         public static int KEY_SIZE = 4096;
         public static string GITHUB_GIST_TOKEN = null;
+        public static bool USE_GIST = false;
         
         public static void Main(string[] args)
         {
@@ -36,6 +37,11 @@ namespace MLAPI.CertificateGeneratorAPI
                 {
                     KEY_SIZE = int.Parse(args[i + 1]);
                 }
+
+                if (args[i].ToLower() == "-gist")
+                {
+                    USE_GIST = true;
+                }
             }
             
             KeyGenerator.Start(KEY_SIZE, GENERATION_THREADS);
@@ -45,7 +51,7 @@ namespace MLAPI.CertificateGeneratorAPI
 
         public static IWebHostBuilder CreateWebHostBuilder(string[] args) =>
             WebHost.CreateDefaultBuilder(args)
-                .UseUrls("http://*:80")
+                .UseUrls("http://localhost:5000")
                 .UseStartup<Startup>();
     }
 }

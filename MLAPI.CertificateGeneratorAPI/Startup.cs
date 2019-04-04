@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Security.Cryptography;
+using System.Threading;
 using System.Threading.Tasks;
+using Markdig;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -34,18 +37,20 @@ namespace MLAPI.CertificateGeneratorAPI
             {                
                 await Task.Factory.StartNew(() =>
                 {
+                    GenerationLog log = new GenerationLog();
+                    log.Entries.Add(new LogEntry("Serving " + context.Connection.RemoteIpAddress));
+                    
                     DateTime startTime = DateTime.UtcNow;
                     DateTime endTime = DateTime.UtcNow.AddDays(30);
 
-                    Console.WriteLine("Getting issuer key pair...");
+                    log.Entries.Add(new LogEntry("Generating issuer key pair..."));
                     RSAParameters issuerKeyPair = KeyGenerator.Get();
                 
-                    Console.WriteLine("Getting certificate key pair...");
+                    log.Entries.Add(new LogEntry("Generating certificate key pair..."));
                     RSAParameters certificateKeyPair = KeyGenerator.Get();
 
+                    log.Entries.Add(new LogEntry("Generating certificate serial number..."));
                     byte[] serialNumber = new byte[20];
-
-                    Console.WriteLine("Generating serial number...");
                     using (RNGCryptoServiceProvider rng = new RNGCryptoServiceProvider())
                     {
                         // Should ensure non negativity and make it smaller
@@ -56,27 +61,41 @@ namespace MLAPI.CertificateGeneratorAPI
                     string issuerName = context.Request.Query.ContainsKey("issuer") ? context.Request.Query["issuer"].ToString() : "Unnamed Issuer";
                     string certificateName = context.Request.Query.ContainsKey("name") ? context.Request.Query["name"].ToString() : "Unnamed MLAPI Development Certificate";
                 
-                    Console.WriteLine("Creating empire...");
-                    CertificateEmpire empire = Generator.GenerateCertificateEmpire(issuerKeyPair, certificateKeyPair, issuerName, certificateName, startTime, endTime, serialNumber);
-                    
-                    GitHubClient github = new GitHubClient(new ProductHeaderValue("MLAPI.Certificate.Generator"));
-                    github.Credentials = new Credentials(Program.GITHUB_GIST_TOKEN);
-                    
-                    Console.WriteLine("Uploading results...");
-                    Gist gist = github.Gist.Create(new NewGist()
-                    {
-                        Description = "http://cert.midlevel.io/ Generated on " + DateTime.UtcNow + " by " + context.Connection.RemoteIpAddress,
-                        Files =
-                        {
-                            {
-                                "quickstart.md",
-                                Generator.GetMarkdownInstructions(empire)
-                            }
-                        },
-                        Public = false
-                    }).Result;
+                    log.Entries.Add(new LogEntry("Generating certificate serial number..."));
+                    CertificateEmpire empire = Generator.GenerateCertificateEmpire(issuerKeyPair, certificateKeyPair, issuerName, certificateName, startTime, endTime, serialNumber, log);
 
-                    context.Response.Redirect(gist.HtmlUrl);
+                    log.EndTime = DateTime.UtcNow;
+
+                    if (Program.USE_GIST)
+                    {
+                        GitHubClient github = new GitHubClient(new ProductHeaderValue("MLAPI.Certificate.Generator"));
+                        github.Credentials = new Credentials(Program.GITHUB_GIST_TOKEN);
+                        
+                        Gist gist = github.Gist.Create(new NewGist()
+                        {
+                            Description = "http://cert.midlevel.io/ Generated on " + DateTime.UtcNow + " by " + context.Connection.RemoteIpAddress,
+                            Files =
+                            {
+                                {
+                                    "quickstart.md",
+                                    Generator.GetMarkdownInstructions(empire)
+                                }
+                            },
+                            Public = false
+                        }).Result;
+                        
+                        context.Response.Redirect(gist.HtmlUrl);
+                    }
+                    else
+                    {
+                        using (StreamWriter writer = new StreamWriter(context.Response.Body))
+                        {
+                            MarkdownPipeline pipeline = new MarkdownPipelineBuilder().UsePipeTables().Build();
+                            
+                            writer.Write(Markdown.ToHtml(Generator.GetMarkdownInstructions(empire), pipeline));
+                            writer.Write(Markdown.ToHtml(log.Serialize()), pipeline);
+                        }
+                    }
                 });
             });
         }

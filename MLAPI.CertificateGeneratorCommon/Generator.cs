@@ -9,29 +9,33 @@ namespace MLAPI.CertificateGeneratorCommon
 {
     public static class Generator
     {
-        public static CertificateEmpire GenerateCertificateEmpire(RSAParameters issuerKeyPair, RSAParameters certificateKeyPair, string issuerName, string certificateName, DateTime validityStartTime, DateTime validityEndTime, byte[] certificateSerialNumber)
+        public static CertificateEmpire GenerateCertificateEmpire(RSAParameters issuerKeyPair, RSAParameters certificateKeyPair, string issuerName, string certificateName, DateTime validityStartTime, DateTime validityEndTime, byte[] certificateSerialNumber, GenerationLog logger = null)
         {
+            logger?.Entries.Add(new LogEntry("Creating issuer RSA instance..."));
             using (RSACryptoServiceProvider issuerRsa = new RSACryptoServiceProvider())
             {
                 try
                 {
+                    logger?.Entries.Add(new LogEntry("Importing issuer RSA key pair..."));
                     issuerRsa.ImportParameters(issuerKeyPair);
 
+                    logger?.Entries.Add(new LogEntry("Creating certificate RSA instance..."));
                     using (RSACryptoServiceProvider certificateRsa = new RSACryptoServiceProvider())
                     {
                         try
                         {
+                            logger?.Entries.Add(new LogEntry("Importing certificate RSA key pair..."));
                             certificateRsa.ImportParameters(certificateKeyPair);
 
-                            Console.WriteLine("Generating issuer...");
+                            logger?.Entries.Add(new LogEntry("Creating issuer request..."));
                             CertificateRequest issuerRequest = new CertificateRequest("CN=" + issuerName, issuerRsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
                             issuerRequest.CertificateExtensions.Add(new X509BasicConstraintsExtension(true, false, 0, true));
                             issuerRequest.CertificateExtensions.Add(new X509SubjectKeyIdentifierExtension(issuerRequest.PublicKey, false));
 
-                            Console.WriteLine("Generating issuer certificate....");
+                            logger?.Entries.Add(new LogEntry("Creating issuer certificate..."));
                             X509Certificate2 issuerCertificate = issuerRequest.CreateSelfSigned(validityStartTime, validityEndTime);
 
-                            Console.WriteLine("Generating self signed certificate...");
+                            logger?.Entries.Add(new LogEntry("Creating certificate request..."));
                             CertificateRequest certificateRequest = new CertificateRequest("CN=" + certificateName, certificateRsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
                             certificateRequest.CertificateExtensions.Add(new X509BasicConstraintsExtension(false, false, 0, false));
                             certificateRequest.CertificateExtensions.Add(new X509KeyUsageExtension(X509KeyUsageFlags.DigitalSignature | X509KeyUsageFlags.NonRepudiation, false));
@@ -41,7 +45,7 @@ namespace MLAPI.CertificateGeneratorCommon
                             }, true));
                             certificateRequest.CertificateExtensions.Add(new X509SubjectKeyIdentifierExtension(certificateRequest.PublicKey, false));
 
-                            Console.WriteLine("Signing certificate...");
+                            logger?.Entries.Add(new LogEntry("Creating self signed certificate..."));
                             X509Certificate2 selfSignedCert = certificateRequest.Create(issuerCertificate, validityStartTime, validityEndTime, certificateSerialNumber);
 
                             return new CertificateEmpire()
@@ -91,16 +95,16 @@ namespace MLAPI.CertificateGeneratorCommon
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("*ONLY USE SELF SIGNED CERTIFICATES INTERNALLY OR FOR TESTING. USE A SERVICE LIKE LETSENCRYPT FOR REAL CERTIFICATES. THIS PROGRAM WILL GENERATE A CERTIFICATE AUTHORITY KEY PAIR AND A CERTIFICATE SIGNED BY THAT AUTHORITY. CERTIFICATES ARE ONLY VALID FOR 30 DAYS. AFTER THAT TIME YOU NEED A NEW ISSUER AND CERTIFICATE.*");
             sb.AppendLine();
-            sb.AppendLine("# Overview");
+            sb.AppendLine("# Quickstart Instructions (Basic Usage)");
             sb.AppendLine();
-            sb.AppendLine("## Server instructions");
-            sb.AppendLine("**IMPORTANT:** *ONLY DO THIS STEP ON THE SERVER. IT SHOULD NOT BE DONE ON CLIENTS*");
+            sb.AppendLine("### Server Instructions");
+            sb.AppendLine("*ONLY DO THIS STEP ON THE SERVER. IT SHOULD NOT BE DONE ON CLIENTS. THIS STRING CONTAINS A BASE64 ENCODED PFX FILE, WHICH IS A COMBINATION OF THE CERTIFICATE AND THE PRIVATE KEY FOR THE CERTIFICATE WHICH IS USED TO SIGN KEY EXCHANGES.*");
             sb.AppendLine();
             sb.AppendLine("In the NetworkingManager.NetworkConfig ``ServerBase64PfxCertificate`` text field. Enter the following:");
             sb.AppendLine("```");
             sb.AppendLine(Convert.ToBase64String(empire.selfSignedCertificate.Export(X509ContentType.Pfx)));
             sb.AppendLine("```");
-            sb.AppendLine("## Client instructions");
+            sb.AppendLine("### Client instructions");
             sb.AppendLine("To make clients trust your certificate issuer. Please do the following before connecting:");
             sb.AppendLine("```csharp");
             sb.AppendLine("CryptographyHelper.OnValidateCertificateCallback = (certificate, hostname) =>");
@@ -124,14 +128,14 @@ namespace MLAPI.CertificateGeneratorCommon
             sb.AppendLine("}");
             sb.AppendLine("```");
             sb.AppendLine();
-            sb.AppendLine("# Advanced");
+            sb.AppendLine("# Details (Advanced Users Only)");
             sb.AppendLine("| Property | Value |");
-            sb.AppendLine("|----------------------------|--------------|");
+            sb.AppendLine("|:----------------------------|:--------------|");
             sb.AppendLine("| Issuer Name | " + empire.issuerCertificate.IssuerName.Name + " |");
             sb.AppendLine("| Issuer Key Type | " + "RSA" + " |");
             sb.AppendLine("| Issuer Key Size | " + empire.issuerKeySize + " |");
-            sb.AppendLine("| Issuer Validity Start | " + empire.issuerCertificate.NotBefore + " |");
-            sb.AppendLine("| Issuer Validity End | " + empire.issuerCertificate.NotAfter + " |");
+            sb.AppendLine("| Issuer Validity Start | " + empire.issuerCertificate.NotBefore + " (UTC)" + " |");
+            sb.AppendLine("| Issuer Validity End | " + empire.issuerCertificate.NotAfter + " (UTC)" + " |");
             sb.AppendLine("| Issuer Serial Number | " + empire.issuerCertificate.SerialNumber + " |");
             sb.AppendLine("| Issuer Thumbprint | " + empire.issuerCertificate.Thumbprint + " |");
             sb.AppendLine("| Certificate Name | " + empire.selfSignedCertificate.IssuerName.Name + " |");
@@ -139,8 +143,8 @@ namespace MLAPI.CertificateGeneratorCommon
             sb.AppendLine("| Certificate Thumbprint | " + empire.selfSignedCertificate.Thumbprint + " |");
             sb.AppendLine("| Certificate Key Type | " + "RSA" + " |");
             sb.AppendLine("| Certificate Key Size | " + empire.certificateKeySize + " |");
-            sb.AppendLine("| Certificate Validity Start | " + empire.selfSignedCertificate.NotBefore + " |");
-            sb.AppendLine("| Certificate Validity End | " + empire.selfSignedCertificate.NotAfter + " |");
+            sb.AppendLine("| Certificate Validity Start | " + empire.selfSignedCertificate.NotBefore + " (UTC)" + " |");
+            sb.AppendLine("| Certificate Validity End | " + empire.selfSignedCertificate.NotAfter + " (UTC)" + " |");
             sb.AppendLine();
             sb.AppendLine("## Keys");
             sb.AppendLine("These are the keys that were used");
