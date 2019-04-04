@@ -57,7 +57,7 @@ namespace MLAPI.CertGenCore
             DateTime startTime = DateTime.UtcNow;
             DateTime endTime = DateTime.UtcNow.AddDays(30);
 
-            byte[] serialNumber = new byte[20];
+            byte[] serialNumber = new byte[16];
 
             using (RNGCryptoServiceProvider rng = new RNGCryptoServiceProvider())
             {
