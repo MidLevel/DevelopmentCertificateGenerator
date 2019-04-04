@@ -148,7 +148,7 @@ namespace MLAPI.CertificateGeneratorCommon
             sb.AppendLine("| Issuer Validity End | " + empire.issuerCertificate.NotAfter + " (UTC)" + " |");
             sb.AppendLine("| Issuer Serial Number | " + empire.issuerCertificate.SerialNumber + " |");
             sb.AppendLine("| Issuer Thumbprint | " + empire.issuerCertificate.Thumbprint + " |");
-            sb.AppendLine("| Certificate Name | " + empire.selfSignedCertificate.IssuerName.Name + " |");
+            sb.AppendLine("| Certificate Name | " + empire.selfSignedCertificate.SubjectName.Name + " |");
             sb.AppendLine("| Certificate Serial Number | " + empire.selfSignedCertificate.SerialNumber + " |");
             sb.AppendLine("| Certificate Thumbprint | " + empire.selfSignedCertificate.Thumbprint + " |");
             sb.AppendLine("| Certificate Key Type | " + "RSA" + " |");
