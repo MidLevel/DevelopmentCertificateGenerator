@@ -9,5 +9,7 @@ namespace MLAPI.CertificateGeneratorCommon
         public RSAParameters certificateKeyPair;
         public X509Certificate2 issuerCertificate;
         public X509Certificate2 selfSignedCertificate;
+        public int issuerKeySize;
+        public int certificateKeySize;
     }
 }

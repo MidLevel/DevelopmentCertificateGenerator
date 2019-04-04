@@ -49,7 +49,9 @@ namespace MLAPI.CertificateGeneratorCommon
                                 issuerKeyPair = issuerKeyPair,
                                 certificateKeyPair = certificateKeyPair,
                                 issuerCertificate = issuerCertificate,
-                                selfSignedCertificate = selfSignedCert
+                                selfSignedCertificate = selfSignedCert,
+                                certificateKeySize = certificateRsa.KeySize,
+                                issuerKeySize = issuerRsa.KeySize
                             };
                         }
                         finally
@@ -127,7 +129,7 @@ namespace MLAPI.CertificateGeneratorCommon
             sb.AppendLine("|----------------------------|--------------|");
             sb.AppendLine("| Issuer Name | " + empire.issuerCertificate.IssuerName.Name + " |");
             sb.AppendLine("| Issuer Key Type | " + "RSA" + " |");
-            sb.AppendLine("| Issuer Key Size | " + "4096" + " |");
+            sb.AppendLine("| Issuer Key Size | " + empire.issuerKeySize + " |");
             sb.AppendLine("| Issuer Validity Start | " + empire.issuerCertificate.NotBefore + " |");
             sb.AppendLine("| Issuer Validity End | " + empire.issuerCertificate.NotAfter + " |");
             sb.AppendLine("| Issuer Serial Number | " + empire.issuerCertificate.SerialNumber + " |");
@@ -136,7 +138,7 @@ namespace MLAPI.CertificateGeneratorCommon
             sb.AppendLine("| Certificate Serial Number | " + empire.selfSignedCertificate.SerialNumber + " |");
             sb.AppendLine("| Certificate Thumbprint | " + empire.selfSignedCertificate.Thumbprint + " |");
             sb.AppendLine("| Certificate Key Type | " + "RSA" + " |");
-            sb.AppendLine("| Certificate Key Size | " + "4096" + " |");
+            sb.AppendLine("| Certificate Key Size | " + empire.certificateKeySize + " |");
             sb.AppendLine("| Certificate Validity Start | " + empire.selfSignedCertificate.NotBefore + " |");
             sb.AppendLine("| Certificate Validity End | " + empire.selfSignedCertificate.NotAfter + " |");
             sb.AppendLine();

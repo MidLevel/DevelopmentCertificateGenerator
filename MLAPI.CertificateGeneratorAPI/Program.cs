@@ -7,6 +7,7 @@ using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using MLAPI.CertificateGeneratorCommon;
 
 namespace MLAPI.CertificateGeneratorAPI
 {
@@ -23,6 +24,9 @@ namespace MLAPI.CertificateGeneratorAPI
                     GITHUB_GIST_TOKEN = args[i + 1];
                 }
             }
+            
+            KeyGenerator.Start(4096);
+            
             CreateWebHostBuilder(args).Build().Run();
         }
 

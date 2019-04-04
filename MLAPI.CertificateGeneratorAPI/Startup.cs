@@ -37,12 +37,15 @@ namespace MLAPI.CertificateGeneratorAPI
                     DateTime startTime = DateTime.UtcNow;
                     DateTime endTime = DateTime.UtcNow.AddDays(30);
 
-                    RSAParameters issuerKeyPair = Generator.GenerateKeyPair(4096);
+                    Console.WriteLine("Getting issuer key pair...");
+                    RSAParameters issuerKeyPair = KeyGenerator.Get();
                 
-                    RSAParameters certificateKeyPair = Generator.GenerateKeyPair(4096);
+                    Console.WriteLine("Getting certificate key pair...");
+                    RSAParameters certificateKeyPair = KeyGenerator.Get();
 
                     byte[] serialNumber = new byte[20];
 
+                    Console.WriteLine("Generating serial number...");
                     using (RNGCryptoServiceProvider rng = new RNGCryptoServiceProvider())
                     {
                         // Should ensure non negativity and make it smaller
@@ -53,11 +56,13 @@ namespace MLAPI.CertificateGeneratorAPI
                     string issuerName = context.Request.Query.ContainsKey("issuer") ? context.Request.Query["issuer"].ToString() : "Unnamed Issuer";
                     string certificateName = context.Request.Query.ContainsKey("name") ? context.Request.Query["name"].ToString() : "Unnamed MLAPI Development Certificate";
                 
+                    Console.WriteLine("Creating empire...");
                     CertificateEmpire empire = Generator.GenerateCertificateEmpire(issuerKeyPair, certificateKeyPair, issuerName, certificateName, startTime, endTime, serialNumber);
                     
                     GitHubClient github = new GitHubClient(new ProductHeaderValue("MLAPI.Certificate.Generator"));
                     github.Credentials = new Credentials(Program.GITHUB_GIST_TOKEN);
                     
+                    Console.WriteLine("Uploading results...");
                     Gist gist = github.Gist.Create(new NewGist()
                     {
                         Description = "http://cert.midlevel.io/ Generated on " + DateTime.UtcNow + " by " + context.Connection.RemoteIpAddress,
