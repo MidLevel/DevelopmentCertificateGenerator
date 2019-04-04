@@ -90,9 +90,19 @@ namespace MLAPI.CertificateGeneratorCommon
             }
         }
 
-        public static string GetMarkdownInstructions(CertificateEmpire empire)
+        public static string GetMarkdownInstructions(CertificateEmpire empire, string gistUrl = null)
         {
             StringBuilder sb = new StringBuilder();
+            
+            
+            if (gistUrl != null)
+            {
+                sb.AppendLine("**[Click Here to read this as a sharable GitHub Gist](" + gistUrl + ")**");
+                sb.AppendLine();
+                sb.AppendLine();
+                sb.AppendLine();
+            }
+            
             sb.AppendLine("*ONLY USE SELF SIGNED CERTIFICATES INTERNALLY OR FOR TESTING. USE A SERVICE LIKE LETSENCRYPT FOR REAL CERTIFICATES. THIS PROGRAM WILL GENERATE A CERTIFICATE AUTHORITY KEY PAIR AND A CERTIFICATE SIGNED BY THAT AUTHORITY. CERTIFICATES ARE ONLY VALID FOR 30 DAYS. AFTER THAT TIME YOU NEED A NEW ISSUER AND CERTIFICATE.*");
             sb.AppendLine();
             sb.AppendLine("# Quickstart Instructions (Basic Usage)");

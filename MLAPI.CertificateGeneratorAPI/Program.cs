@@ -17,7 +17,7 @@ namespace MLAPI.CertificateGeneratorAPI
         public static int GENERATION_THREADS = Environment.ProcessorCount;
         public static int KEY_SIZE = 4096;
         public static string GITHUB_GIST_TOKEN = null;
-        public static bool USE_GIST = false;
+        public static bool GIST_REDIRECT = false;
         public static int KEY_QUEUE_SIZE = 20;
         
         public static void Main(string[] args)
@@ -39,9 +39,9 @@ namespace MLAPI.CertificateGeneratorAPI
                     KEY_SIZE = int.Parse(args[i + 1]);
                 }
 
-                if (args[i].ToLower() == "-gist")
+                if (args[i].ToLower() == "-gist-redirect")
                 {
-                    USE_GIST = true;
+                    GIST_REDIRECT = true;
                 }
 
                 if (args[i].ToLower() == "-key-queue-size")

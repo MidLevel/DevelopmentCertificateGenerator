@@ -64,14 +64,15 @@ namespace MLAPI.CertificateGeneratorAPI
                     log.Entries.Add(new LogEntry("Generating certificate serial number..."));
                     CertificateEmpire empire = Generator.GenerateCertificateEmpire(issuerKeyPair, certificateKeyPair, issuerName, certificateName, startTime, endTime, serialNumber, log);
 
-                    log.EndTime = DateTime.UtcNow;
-
-                    if (Program.USE_GIST)
+                    Gist gist = null;
+                    
+                    if (Program.GITHUB_GIST_TOKEN != null)
                     {
+                        log.Entries.Add(new LogEntry("Uploading gist..."));
                         GitHubClient github = new GitHubClient(new ProductHeaderValue("MLAPI.Certificate.Generator"));
                         github.Credentials = new Credentials(Program.GITHUB_GIST_TOKEN);
                         
-                        Gist gist = github.Gist.Create(new NewGist()
+                        gist = github.Gist.Create(new NewGist()
                         {
                             Description = "http://cert.midlevel.io/ Generated on " + DateTime.UtcNow + " by " + context.Connection.RemoteIpAddress,
                             Files =
@@ -83,16 +84,24 @@ namespace MLAPI.CertificateGeneratorAPI
                             },
                             Public = false
                         }).Result;
+
+                        log.EndTime = DateTime.UtcNow;
                         
-                        context.Response.Redirect(gist.HtmlUrl);
+                        if (Program.GIST_REDIRECT)
+                        {
+                            context.Response.Redirect(gist.HtmlUrl);
+                        }
                     }
-                    else
+                    
+                    if (!Program.GIST_REDIRECT)
                     {
+                        log.EndTime = DateTime.UtcNow;
+                        
                         using (StreamWriter writer = new StreamWriter(context.Response.Body))
                         {
                             MarkdownPipeline pipeline = new MarkdownPipelineBuilder().UsePipeTables().Build();
                             
-                            writer.Write(Markdown.ToHtml(Generator.GetMarkdownInstructions(empire), pipeline));
+                            writer.Write(Markdown.ToHtml(Generator.GetMarkdownInstructions(empire, gist == null ? null : gist.HtmlUrl), pipeline));
                             writer.Write(Markdown.ToHtml(log.Serialize()), pipeline);
                         }
                     }
