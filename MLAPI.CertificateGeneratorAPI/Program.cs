@@ -18,6 +18,7 @@ namespace MLAPI.CertificateGeneratorAPI
         public static int KEY_SIZE = 4096;
         public static string GITHUB_GIST_TOKEN = null;
         public static bool USE_GIST = false;
+        public static int KEY_QUEUE_SIZE = 20;
         
         public static void Main(string[] args)
         {
@@ -42,9 +43,14 @@ namespace MLAPI.CertificateGeneratorAPI
                 {
                     USE_GIST = true;
                 }
+
+                if (args[i].ToLower() == "-key-queue-size")
+                {
+                    KEY_QUEUE_SIZE = int.Parse(args[i + 1]);
+                }
             }
             
-            KeyGenerator.Start(KEY_SIZE, GENERATION_THREADS);
+            KeyGenerator.Start(KEY_SIZE, GENERATION_THREADS, KEY_QUEUE_SIZE);
             
             CreateWebHostBuilder(args).Build().Run();
         }

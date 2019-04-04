@@ -17,11 +17,12 @@ namespace MLAPI.CertificateGeneratorCommon
         private static List<Thread> _thread = new List<Thread>();
         private static bool _isRunning = false;
         private static int _keySize;
+        private static int _queueSize;
         
         private static readonly ReaderWriterLockSlim _queueLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
         private static readonly Queue<PendingRSAKey> _generatedKeys = new Queue<PendingRSAKey>();
         
-        public static void Start(int keySize, int threadCount)
+        public static void Start(int keySize, int threadCount, int queueSize)
         {
             if (_isRunning)
             {
@@ -29,6 +30,7 @@ namespace MLAPI.CertificateGeneratorCommon
             }
             _keySize = keySize;
             _isRunning = true;
+            _queueSize = queueSize;
 
             for (int i = 0; i < threadCount; i++)
             {
@@ -42,7 +44,7 @@ namespace MLAPI.CertificateGeneratorCommon
         {
             while (_isRunning)
             {
-                while (_generatedKeys.Count >= 20 && _isRunning)
+                while (_generatedKeys.Count >= _queueSize && _isRunning)
                 {
                     RotateKeys();
                     Thread.Sleep(100);
@@ -78,7 +80,7 @@ namespace MLAPI.CertificateGeneratorCommon
 
             try
             {
-                if (_generatedKeys.Count > 20)
+                if (_generatedKeys.Count > _queueSize)
                 {
                     _queueLock.EnterWriteLock();
 
