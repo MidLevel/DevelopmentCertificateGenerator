@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace MLAPI.CertificateGeneratorCommon
 {
@@ -14,7 +15,6 @@ namespace MLAPI.CertificateGeneratorCommon
     
     public static class KeyGenerator
     {
-        private static List<Thread> _thread = new List<Thread>();
         private static bool _isRunning = false;
         private static int _keySize;
         private static int _queueSize;
@@ -34,9 +34,7 @@ namespace MLAPI.CertificateGeneratorCommon
 
             for (int i = 0; i < threadCount; i++)
             {
-                Thread thread = new Thread(Run);
-                _thread.Add(thread);
-                thread.Start();
+                Task.Factory.StartNew(Run);
             }
         }
 

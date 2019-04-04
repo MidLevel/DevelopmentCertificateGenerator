@@ -97,7 +97,7 @@ namespace MLAPI.CertificateGeneratorCommon
             
             if (gistUrl != null)
             {
-                sb.AppendLine("**[Click Here to read this as a sharable GitHub Gist](" + gistUrl + ")**");
+                sb.AppendLine("**[Click here to read this as a sharable GitHub Gist](" + gistUrl + ")**");
                 sb.AppendLine();
                 sb.AppendLine();
                 sb.AppendLine();

@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using FluffySpoon.AspNet.LetsEncrypt;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -57,7 +58,12 @@ namespace MLAPI.CertificateGeneratorAPI
 
         public static IWebHostBuilder CreateWebHostBuilder(string[] args) =>
             WebHost.CreateDefaultBuilder(args)
-                .UseUrls("http://*:80")
+                .ConfigureLogging(l => l.AddConsole(x => x.IncludeScopes = true))
+                .UseKestrel(kestrelOptions => kestrelOptions.ConfigureHttpsDefaults(
+                    httpsOptions => httpsOptions.ServerCertificateSelector = 
+                        (c, s) => LetsEncryptRenewalService.Certificate))
+                .UseUrls("http://cert.midlevel.io", 
+                    "https://cert.midlevel.io")
                 .UseStartup<Startup>();
     }
 }
