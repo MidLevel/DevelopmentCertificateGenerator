@@ -89,7 +89,7 @@ namespace MLAPI.CertificateGeneratorAPI
                         RSAParameters certificateKeyPair = KeyGenerator.Get();
 
                         log.Entries.Add(new LogEntry("Generating certificate serial number..."));
-                        byte[] serialNumber = new byte[20];
+                        byte[] serialNumber = new byte[16];
                         using (RNGCryptoServiceProvider rng = new RNGCryptoServiceProvider())
                         {
                             // Should ensure non negativity and make it smaller
