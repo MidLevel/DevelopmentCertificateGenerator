@@ -53,7 +53,7 @@ namespace MLAPI.CertificateGeneratorCommon
                                 issuerKeyPair = issuerKeyPair,
                                 certificateKeyPair = certificateKeyPair,
                                 issuerCertificate = issuerCertificate,
-                                selfSignedCertificate = selfSignedCert,
+                                selfSignedCertificate = selfSignedCert.CopyWithPrivateKey(certificateRsa),
                                 certificateKeySize = certificateRsa.KeySize,
                                 issuerKeySize = issuerRsa.KeySize
                             };
